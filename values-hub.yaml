@@ -126,6 +126,10 @@ clusterGroup:
           value: ambient
         - name: servicemesh.istio.name
           value: default
+        # OSSM 3.2 does not ship the Kiali CRD. Leaving the console on blocks the
+        # whole mesh sync, including the Istio Gateway class this pattern needs.
+        - name: servicemesh.console.enabled
+          value: "false"
 
     cert-manager-config:
       name: cert-manager-config
