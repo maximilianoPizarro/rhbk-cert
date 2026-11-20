@@ -5,7 +5,7 @@ metadata:
   name: neuralbank-oidc
   namespace: {{ .Release.Namespace }}
   annotations:
-    argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-wave: "3"
 spec:
   targetRef:
     group: gateway.networking.k8s.io
