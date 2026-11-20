@@ -1,0 +1,17 @@
+apiVersion: kuadrant.io/v1
+kind: TLSPolicy
+metadata:
+  name: {{ .Values.gateway.name }}-tls
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: {{ .Values.gateway.name }}
+  issuerRef:
+    name: {{ .Values.tlsPolicy.issuerRef.name }}
+    kind: {{ .Values.tlsPolicy.issuerRef.kind }}
+  duration: {{ .Values.tlsPolicy.duration }}
+  renewBefore: {{ .Values.tlsPolicy.renewBefore }}

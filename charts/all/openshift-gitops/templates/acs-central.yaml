@@ -1,0 +1,72 @@
+{{- if and (eq .Values.clusterRole "hub") (.Values.acs.enabled | default false) }}
+apiVersion: platform.stackrox.io/v1alpha1
+kind: Central
+metadata:
+  name: stackrox-central-services
+  namespace: stackrox
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  central:
+    exposure:
+      loadBalancer:
+        enabled: false
+      route:
+        enabled: true
+    persistence:
+      persistentVolumeClaim:
+        claimName: stackrox-db
+    resources:
+      requests:
+        cpu: 250m
+        memory: 1Gi
+      limits:
+        cpu: "2"
+        memory: 4Gi
+    db:
+      resources:
+        requests:
+          cpu: 250m
+          memory: 1Gi
+        limits:
+          cpu: "2"
+          memory: 4Gi
+  scannerV4:
+    db:
+      resources:
+        requests:
+          cpu: 250m
+          memory: 1Gi
+        limits:
+          cpu: "2"
+          memory: 4Gi
+    indexer:
+      scaling:
+        autoScaling: Disabled
+        replicas: 1
+      resources:
+        requests:
+          cpu: 250m
+          memory: 256Mi
+    matcher:
+      scaling:
+        autoScaling: Disabled
+        replicas: 1
+      resources:
+        requests:
+          cpu: 250m
+          memory: 256Mi
+  scanner:
+    analyzer:
+      scaling:
+        autoScaling: Disabled
+        maxReplicas: 1
+        minReplicas: 1
+        replicas: 1
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+    scannerComponent: Enabled
+{{- end }}

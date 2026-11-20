@@ -1,0 +1,34 @@
+clusterDomain: ""
+clusterRole: hub
+
+# Hub-only: this chart is the SOLE owner of the ArgoCD/vp-gitops CR's
+# spec.rbac and spec.localUsers on the hub (see argocd.yaml comment for
+# the singleton-ownership rationale). Enable to create the ai-agent local
+# user consumed by charts/all/argocd-mcp.
+argocdLocalUser:
+  enabled: false
+  name: ai-agent
+  apiKey: true
+  login: false
+  tokenLifetime: "720h"
+  autoRenewToken: true
+
+# Hub-only: prevent Argo CD Sync=Unknown from MCE ocm-proxyserver OpenAPI (ACM 2.16+).
+# See docs/validatedpatterns-docs/troubleshooting.md#argocd-unknown-sync-status-acm-216
+acmArgocdOpenapiFix:
+  enabled: true
+  schedule: "*/15 * * * *"
+  image: registry.redhat.io/openshift4/ose-cli:latest
+
+# RHACS Central CR (hub). Disabled by default -- matches the rest of the
+# pattern, where acs-init-bundle-sync/acs-secured-cluster Applications are
+# commented out in values-*.yaml to save resources. Previously this
+# template rendered unconditionally for clusterRole=hub with no flag at
+# all, so Argo CD always expected to create it -- since the stackrox
+# namespace/RHACS CRDs were never actually installed, the CR could never
+# be created, and the openshift-gitops Application stayed permanently
+# OutOfSync/Degraded ("Missing" health) with no way to converge. Flip this
+# (and the acs-init-bundle-sync/acs-secured-cluster Applications) together
+# if you actually want ACS in this pattern.
+acs:
+  enabled: false

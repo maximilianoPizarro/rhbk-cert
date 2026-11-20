@@ -1,0 +1,63 @@
+{{- if .Values.acme.enabled }}
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  acme:
+    server: {{ .Values.acme.server }}
+    email: {{ .Values.acme.email }}
+    privateKeySecretRef:
+      name: {{ .Values.acme.privateKeySecretName }}
+    solvers:
+      - dns01:
+          {{- if eq .Values.acme.provider "route53" }}
+          route53:
+            region: {{ .Values.acme.route53.region }}
+            {{- if .Values.acme.route53.hostedZoneID }}
+            hostedZoneID: {{ .Values.acme.route53.hostedZoneID }}
+            {{- end }}
+            secretAccessKeySecretRef:
+              name: {{ .Values.acme.route53.credentialsSecretName }}
+              key: {{ .Values.acme.route53.credentialsSecretKey }}
+            {{- if .Values.acme.route53.role }}
+            role: {{ .Values.acme.route53.role }}
+            {{- end }}
+          {{- else if eq .Values.acme.provider "cloudflare" }}
+          cloudflare:
+            {{- if .Values.acme.cloudflare.email }}
+            email: {{ .Values.acme.cloudflare.email }}
+            {{- end }}
+            apiTokenSecretRef:
+              name: {{ .Values.acme.cloudflare.credentialsSecretName }}
+              key: {{ .Values.acme.cloudflare.credentialsSecretKey }}
+          {{- else if eq .Values.acme.provider "azure" }}
+          azureDNS:
+            subscriptionID: {{ .Values.acme.azure.subscriptionID }}
+            resourceGroupName: {{ .Values.acme.azure.resourceGroupName }}
+            hostedZoneName: {{ .Values.acme.azure.hostedZoneName }}
+            environment: {{ .Values.acme.azure.environment }}
+            tenantID: {{ .Values.acme.azure.tenantID }}
+            managedIdentity:
+              clientID: {{ .Values.acme.azure.clientID }}
+            clientSecretSecretRef:
+              name: {{ .Values.acme.azure.credentialsSecretName }}
+              key: {{ .Values.acme.azure.credentialsSecretKey }}
+          {{- else if eq .Values.acme.provider "google" }}
+          cloudDNS:
+            project: {{ .Values.acme.google.project }}
+            serviceAccountSecretRef:
+              name: {{ .Values.acme.google.credentialsSecretName }}
+              key: {{ .Values.acme.google.credentialsSecretKey }}
+          {{- else if eq .Values.acme.provider "acmedns" }}
+          acmeDNS:
+            host: {{ .Values.acme.acmedns.host }}
+            accountSecretRef:
+              name: {{ .Values.acme.acmedns.credentialsSecretName }}
+              key: {{ .Values.acme.acmedns.credentialsSecretKey }}
+          {{- else }}
+          {{- fail (printf "acme.provider must be one of: route53, cloudflare, azure, google, acmedns. Got: %s" .Values.acme.provider) }}
+          {{- end }}
+{{- end }}

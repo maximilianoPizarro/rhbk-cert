@@ -1,0 +1,5 @@
+values-secret.yaml
+*.orig
+*.retry
+Chart.lock
+charts/*.tgz

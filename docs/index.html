@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>rhbk-cert — Automated Certificate Rotation | Red Hat Validated Pattern</title>
+  <meta name="description" content="Automated TLS certificate rotation for Red Hat Build of Keycloak and OpenShift applications using cert-manager, Kuadrant, and GitOps." />
+  <link rel="icon" href="images/logo.svg" type="image/svg+xml" />
+  <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;700;900&family=Red+Hat+Text:wght@400;500;700&family=Red+Hat+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --pf-bg-dark:    #151515;
+      --pf-bg-card:    #1e1e1e;
+      --pf-bg-hover:   #292929;
+      --pf-border:     #3c3f42;
+      --pf-text:       #e0e0e0;
+      --pf-text-muted: #8a8d90;
+      --pf-red:        #ee0000;
+      --pf-red-light:  #ff6060;
+      --pf-blue:       #0066cc;
+      --pf-blue-light: #73bcf7;
+      --pf-gold:       #f0ab00;
+      --pf-green:      #3e8635;
+      --pf-cyan:       #009596;
+      --pf-code-bg:    #0f0f0f;
+      --pf-radius:     8px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Red Hat Text', sans-serif; background: var(--pf-bg-dark); color: var(--pf-text); line-height: 1.7; font-size: 16px; }
+
+    /* NAV */
+    nav { background: #0c0c0c; border-bottom: 1px solid var(--pf-border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    nav .brand { font-family: 'Red Hat Display', sans-serif; font-weight: 700; font-size: 1.1em; color: #fff; display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    nav .brand svg { width: 28px; height: 28px; }
+    nav .nav-links { display: flex; gap: 20px; align-items: center; }
+    nav .nav-links a { color: var(--pf-text-muted); text-decoration: none; font-size: 0.9em; transition: color 0.2s; }
+    nav .nav-links a:hover { color: var(--pf-red-light); }
+    nav .lang-switch { background: var(--pf-bg-card); border: 1px solid var(--pf-border); border-radius: var(--pf-radius); padding: 4px 12px; color: var(--pf-text-muted); font-size: 0.85em; text-decoration: none; transition: border-color 0.2s; }
+    nav .lang-switch:hover { border-color: var(--pf-red); color: var(--pf-red-light); }
+
+    /* HERO */
+    .hero { background: linear-gradient(135deg, #0c0c0c 0%, #1a0000 50%, #0c0c0c 100%); border-bottom: 3px solid var(--pf-red); padding: 70px 20px 60px; text-align: center; }
+    .hero .rh-badge { display: inline-block; background: var(--pf-red); color: #fff; font-family: 'Red Hat Mono', monospace; font-size: 0.75em; font-weight: 500; padding: 3px 10px; border-radius: 3px; margin-bottom: 20px; letter-spacing: 0.5px; }
+    .hero h1 { font-family: 'Red Hat Display', sans-serif; font-weight: 900; font-size: 2.8em; letter-spacing: -0.5px; background: linear-gradient(90deg, var(--pf-red-light), var(--pf-gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero p.subtitle { color: var(--pf-text-muted); font-size: 1.15em; margin-top: 12px; max-width: 680px; margin-left: auto; margin-right: auto; }
+    .hero .badges { margin-top: 24px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 0.8em; font-weight: 600; font-family: 'Red Hat Mono', monospace; }
+    .badge-red  { background: var(--pf-red); color: #fff; }
+    .badge-blue { background: var(--pf-blue); color: #fff; }
+    .badge-gold { background: var(--pf-gold); color: #000; }
+    .badge-cyan { background: var(--pf-cyan); color: #fff; }
+    .badge-green { background: var(--pf-green); color: #fff; }
+    .hero .cta { margin-top: 32px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn { display: inline-block; padding: 10px 24px; border-radius: var(--pf-radius); font-family: 'Red Hat Display', sans-serif; font-weight: 600; font-size: 0.95em; text-decoration: none; transition: all 0.2s; }
+    .btn-primary { background: var(--pf-red); color: #fff; }
+    .btn-primary:hover { background: #c00; }
+    .btn-outline { border: 1px solid var(--pf-border); color: var(--pf-text); }
+    .btn-outline:hover { border-color: var(--pf-red); color: var(--pf-red-light); }
+
+    /* LAYOUT */
+    .container { max-width: 1100px; margin: 0 auto; padding: 48px 24px; }
+    h2 { font-family: 'Red Hat Display', sans-serif; font-weight: 700; font-size: 1.8em; margin: 48px 0 20px; padding-bottom: 10px; border-bottom: 2px solid var(--pf-red); color: #fff; }
+    h3 { font-family: 'Red Hat Display', sans-serif; font-weight: 600; font-size: 1.25em; margin: 28px 0 10px; color: var(--pf-blue-light); }
+    p { margin-bottom: 14px; }
+    a { color: var(--pf-blue-light); text-decoration: none; transition: color 0.2s; }
+    a:hover { color: var(--pf-gold); }
+    strong { color: #fff; }
+
+    /* CARDS */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 18px; margin: 24px 0; }
+    .card { background: var(--pf-bg-card); border: 1px solid var(--pf-border); border-radius: var(--pf-radius); padding: 24px; transition: border-color 0.2s, transform 0.15s; }
+    .card:hover { border-color: var(--pf-red); transform: translateY(-2px); }
+    .card .icon { font-size: 1.8em; margin-bottom: 12px; }
+    .card h4 { font-family: 'Red Hat Display', sans-serif; font-size: 1.05em; color: #fff; margin-bottom: 6px; }
+    .card p { color: var(--pf-text-muted); font-size: 0.93em; margin: 0; }
+
+    /* TABLE */
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.92em; }
+    th { background: var(--pf-bg-card); color: var(--pf-gold); text-align: left; padding: 10px 14px; font-family: 'Red Hat Display', sans-serif; font-weight: 600; border-bottom: 2px solid var(--pf-red); }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--pf-border); vertical-align: top; }
+    tr:hover td { background: var(--pf-bg-hover); }
+
+    /* CODE */
+    code { font-family: 'Red Hat Mono', monospace; background: var(--pf-code-bg); padding: 2px 6px; border-radius: 4px; font-size: 0.88em; color: var(--pf-red-light); }
+    pre { background: var(--pf-code-bg); border: 1px solid var(--pf-border); border-left: 4px solid var(--pf-red); border-radius: var(--pf-radius); padding: 20px; overflow-x: auto; margin: 16px 0; }
+    pre code { background: none; padding: 0; color: var(--pf-text); font-size: 0.87em; }
+
+    /* ROTATION DIAGRAM */
+    .rotation-diagram { background: var(--pf-code-bg); border: 1px solid var(--pf-border); border-radius: var(--pf-radius); padding: 28px 24px; margin: 20px 0; font-family: 'Red Hat Mono', monospace; font-size: 0.84em; line-height: 1.6; color: var(--pf-text); overflow-x: auto; }
+    .rotation-diagram .hl-red { color: var(--pf-red-light); font-weight: bold; }
+    .rotation-diagram .hl-gold { color: var(--pf-gold); }
+    .rotation-diagram .hl-cyan { color: var(--pf-cyan); }
+    .rotation-diagram .hl-blue { color: var(--pf-blue-light); }
+
+    /* FOOTER */
+    footer { border-top: 1px solid var(--pf-border); padding: 32px 20px; text-align: center; color: var(--pf-text-muted); font-size: 0.88em; }
+    footer a { color: var(--pf-red-light); }
+
+    @media (max-width: 600px) { .hero h1 { font-size: 1.9em; } nav .nav-links { display: none; } }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="brand">
+    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="15" fill="#ee0000"/>
+      <path d="M9 10h9a4 4 0 0 1 0 8h-5l5 4H14l-5-4V10z" fill="#fff"/>
+    </svg>
+    rhbk-cert
+  </a>
+  <div class="nav-links">
+    <a href="#overview">Overview</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#operators">Operators</a>
+    <a href="#quickstart">Quick Start</a>
+    <a href="#extend">Extend</a>
+    <a href="https://github.com/maximilianoPizarro/rhbk-cert">GitHub</a>
+  </div>
+  <a href="es/" class="lang-switch">🌐 Español</a>
+</nav>
+
+<section class="hero">
+  <div class="rh-badge">Red Hat Validated Pattern</div>
+  <h1>Automated Certificate<br>Rotation for OpenShift</h1>
+  <p class="subtitle">
+    cert-manager + Kuadrant + GitOps — zero-touch TLS lifecycle for
+    Red Hat Build of Keycloak and every application on your cluster.
+  </p>
+  <div class="badges">
+    <span class="badge badge-red">cert-manager</span>
+    <span class="badge badge-blue">RHBK 26.4</span>
+    <span class="badge badge-cyan">Kuadrant</span>
+    <span class="badge badge-gold">Istio / OSSM 3</span>
+    <span class="badge badge-green">OCP 4.17+</span>
+  </div>
+  <div class="cta">
+    <a href="https://github.com/maximilianoPizarro/rhbk-cert" class="btn btn-primary">View on GitHub</a>
+    <a href="#quickstart" class="btn btn-outline">Quick Start</a>
+  </div>
+</section>
+
+<div class="container">
+
+  <section id="overview">
+    <h2>What It Solves</h2>
+    <p>
+      Managing TLS certificates manually for identity providers and APIs is operationally fragile —
+      expired certificates cause outages, and rotating them by hand across multiple services is error-prone.
+      <strong>rhbk-cert</strong> eliminates that toil: a single Validated Pattern GitOps deployment
+      provisions <strong>cert-manager</strong>, configures a <strong>ClusterIssuer</strong> (ACME or internal CA),
+      and wires automatic certificate renewal into both the <strong>Istio Gateway</strong> (via Kuadrant TLSPolicy)
+      and the <strong>RHBK Operator</strong> (via <code>spec.http.tlsSecret</code>).
+      Certificates renew before expiry. No human intervention. Replicable for any number of applications.
+    </p>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="icon">🔐</div>
+        <h4>cert-manager Operator</h4>
+        <p>Issues and renews TLS certificates from ACME (Let's Encrypt) or an internal CA. Supports Route53, Cloudflare, Azure DNS, Google Cloud DNS, and ACME DNS.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🗝️</div>
+        <h4>Red Hat Build of Keycloak</h4>
+        <p>RHBK Operator monitors the referenced TLS Secret. When cert-manager renews it, RHBK automatically restarts to load the new certificate — no manual action.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🌐</div>
+        <h4>Kuadrant TLSPolicy</h4>
+        <p>Attached to the Istio Gateway, TLSPolicy delegates certificate lifecycle to cert-manager. Gateway hot-reloads renewed certs with zero downtime.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🔄</div>
+        <h4>GitOps with ArgoCD</h4>
+        <p>All resources — ClusterIssuer, TLSPolicy, Gateway, Keycloak CR — are declared in Git and continuously reconciled by ArgoCD. Drift is prevented.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🔑</div>
+        <h4>Vault + External Secrets</h4>
+        <p>DNS provider credentials and Keycloak admin secrets are stored in HashiCorp Vault. External Secrets Operator injects them as Kubernetes Secrets — never committed to Git.</p>
+      </div>
+      <div class="card">
+        <div class="icon">➕</div>
+        <h4>Replicable for N Apps</h4>
+        <p>Add a new application by attaching an HTTPRoute to the existing Gateway. The ClusterIssuer and TLSPolicy already cover it. Zero additional cert configuration.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="architecture">
+    <h2>Certificate Rotation Circle</h2>
+    <p>The rotation circle runs entirely within the cluster. Once bootstrapped, certificate renewal requires no external operator action.</p>
+    <div class="rotation-diagram">
+<span class="hl-red">ClusterIssuer</span> (ACME DNS01 / Internal CA)
+  │
+  ├─► <span class="hl-gold">cert-manager Certificate</span>  [keycloak-system / <span class="hl-cyan">rhbk-tls-secret</span>]
+  │       │
+  │       └─► <span class="hl-blue">RHBK Operator</span> detects Secret change
+  │               └─► Rolling restart (~1 min)
+  │                       └─► Keycloak serves renewed cert via HTTPS
+  │
+  └─► <span class="hl-gold">Kuadrant TLSPolicy</span>
+          │  (auto-creates cert-manager Certificate)
+          └─► <span class="hl-gold">cert-manager Certificate</span>  [neuralbank-stack / <span class="hl-cyan">neuralbank-gateway-tls</span>]
+                  │
+                  └─► <span class="hl-blue">Istio Gateway</span> hot-reloads cert (zero downtime)
+                          └─► HTTPRoute → <span class="hl-blue">Neuralbank</span> (OIDC via RHBK AuthPolicy)
+
+<span class="hl-red">RENEWAL</span> — automatic, triggered by cert-manager at (expiry − renewBefore):
+  cert-manager renews → updates Secret in-place
+  Gateway: Istio hot-reloads (no restart)
+  RHBK: Operator polling detects Secret change → rolling restart
+    </div>
+  </section>
+
+  <section id="operators">
+    <h2>Operators Deployed</h2>
+    <p>All operators are sourced from the official Red Hat Operator Catalog (<code>redhat-operators</code>). No community or third-party catalogs required.</p>
+    <table>
+      <thead>
+        <tr><th>Operator</th><th>Channel</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Red Hat OpenShift GitOps</strong></td><td><code>stable</code></td><td>ArgoCD — GitOps engine for all resources</td></tr>
+        <tr><td><strong>cert-manager for OpenShift</strong></td><td><code>stable-v1</code></td><td>Certificate issuance and automatic renewal</td></tr>
+        <tr><td><strong>External Secrets Operator</strong></td><td><code>stable-v1</code></td><td>Pull secrets from Vault into Kubernetes</td></tr>
+        <tr><td><strong>Red Hat OpenShift Service Mesh 3</strong></td><td><code>stable-3.2</code></td><td>Istio / Gateway API provider</td></tr>
+        <tr><td><strong>Red Hat Connectivity Link</strong></td><td><code>stable</code></td><td>Kuadrant — TLSPolicy, AuthPolicy, RateLimitPolicy</td></tr>
+        <tr><td><strong>Red Hat Build of Keycloak</strong></td><td><code>stable-v26.4</code></td><td>OIDC Identity Provider with TLS secret integration</td></tr>
+      </tbody>
+    </table>
+
+    <h3>DNS Provider Support</h3>
+    <p>Set <code>acme.provider</code> in <code>values-secret.yaml</code> to select your DNS provider for ACME DNS01 challenge. For internal/air-gapped clusters, use <code>selfSigned.enabled: true</code>.</p>
+    <table>
+      <thead>
+        <tr><th>Provider</th><th><code>acme.provider</code></th><th>Secret key</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>AWS Route 53</td><td><code>route53</code></td><td><code>secret-access-key</code></td></tr>
+        <tr><td>Cloudflare</td><td><code>cloudflare</code></td><td><code>api-token</code></td></tr>
+        <tr><td>Azure DNS</td><td><code>azure</code></td><td><code>client-secret</code></td></tr>
+        <tr><td>Google Cloud DNS</td><td><code>google</code></td><td><code>key.json</code></td></tr>
+        <tr><td>ACME DNS (self-hosted)</td><td><code>acmedns</code></td><td><code>acmedns.json</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>OpenShift Node Requirements</h3>
+    <table>
+      <thead>
+        <tr><th>Resource</th><th>Minimum</th><th>Recommended</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>OCP version</td><td>4.17</td><td>4.20</td></tr>
+        <tr><td>Control plane nodes</td><td>3 × 4 vCPU / 16 GB RAM</td><td>3 × 8 vCPU / 32 GB RAM</td></tr>
+        <tr><td>Worker nodes</td><td>3 × 8 vCPU / 32 GB RAM</td><td>3 × 16 vCPU / 64 GB RAM</td></tr>
+        <tr><td>Storage class</td><td>RWO, 50 GB/worker</td><td>RWO, 100 GB/worker</td></tr>
+        <tr><td>DNS</td><td>Wildcard <code>*.apps.&lt;domain&gt;</code> → LB</td><td>Same</td></tr>
+        <tr><td>OCP Catalog</td><td><code>redhat-operators</code> accessible</td><td>Same</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="quickstart">
+    <h2>Quick Start</h2>
+    <pre><code># Clone and configure
+git clone https://github.com/maximilianoPizarro/rhbk-cert.git
+cd rhbk-cert
+cp values-secret.yaml.template values-secret.yaml
+
+# Edit values-secret.yaml: fill in Keycloak admin, DB, and DNS credentials
+
+# Deploy
+make install</code></pre>
+    <p>
+      <code>make install</code> installs the Validated Patterns Operator (if not present), loads secrets into Vault,
+      and applies the Pattern CR. ArgoCD syncs all components in wave order — cert-manager first, then
+      the Istio mesh, then RHBK, then the Neuralbank Gateway.
+    </p>
+    <p>Monitor progress: <code>oc get applications -n vp-gitops</code></p>
+  </section>
+
+  <section id="extend">
+    <h2>Extending to New Applications</h2>
+    <p>
+      The existing <strong>ClusterIssuer</strong> and <strong>TLSPolicy</strong> on the Gateway
+      cover all HTTPRoutes attached to it — no additional certificate configuration required.
+    </p>
+    <pre><code>apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: my-new-app
+  namespace: neuralbank-stack
+spec:
+  parentRefs:
+    - name: neuralbank-gateway
+      namespace: neuralbank-stack
+  hostnames:
+    - my-new-app.apps.cluster.example.com
+  rules:
+    - backendRefs:
+        - name: my-new-app
+          port: 8080</code></pre>
+    <p>
+      To add OIDC protection, attach a <code>kuadrant.io/v1 AuthPolicy</code> referencing
+      the existing RHBK realm. No cert changes needed.
+    </p>
+  </section>
+
+</div>
+
+<footer>
+  <p>
+    <strong>rhbk-cert</strong> v1.0.0 &middot;
+    <a href="https://github.com/maximilianoPizarro/rhbk-cert">GitHub</a> &middot;
+    <a href="https://validatedpatterns.io">Validated Patterns</a> &middot;
+    <a href="es/">Español</a> &middot;
+    Apache 2.0 License
+  </p>
+  <p style="margin-top:8px;">Built with <a href="https://ux.redhat.com">Red Hat UX</a> design system &middot; Maintained by <a href="https://github.com/maximilianoPizarro">Maximiliano Pizarro</a></p>
+</footer>
+
+</body>
+</html>

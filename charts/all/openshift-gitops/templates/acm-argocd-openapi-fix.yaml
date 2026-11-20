@@ -1,0 +1,171 @@
+{{- if .Values.acmArgocdOpenapiFix.enabled | default true }}
+{{- $argoNs := "vp-gitops" }}
+{{- if .Values.global }}
+{{- $argoNs = .Values.global.vpArgoNamespace | default $argoNs }}
+{{- end }}
+# ACM/MCE ocm-proxyserver publishes clusterview OpenAPI with a broken UserPermission.status
+# reference; Argo CD then shows Sync=Unknown (ComparisonError) for all hub apps.
+# Scale ocm-proxyserver to 0 and drop its APIServices so the hub OpenAPI cache loads.
+# Trade-off: clusterview UserPermission / ManagedClusterSet via proxy are unavailable;
+# direct spoke APIs and ACM fleet inventory still work.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: acm-argocd-openapi-fix
+  namespace: {{ $argoNs }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: acm-argocd-openapi-fix
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+rules:
+  - apiGroups: ["apiregistration.k8s.io"]
+    resources: ["apiservices"]
+    verbs: ["get", "list", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "deployments/scale", "statefulsets"]
+    verbs: ["get", "list", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: acm-argocd-openapi-fix
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: acm-argocd-openapi-fix
+subjects:
+  - kind: ServiceAccount
+    name: acm-argocd-openapi-fix
+    namespace: {{ $argoNs }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: acm-argocd-openapi-fix-hook
+  namespace: {{ $argoNs }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  ttlSecondsAfterFinished: 600
+  activeDeadlineSeconds: 300
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: acm-argocd-openapi-fix
+      containers:
+        - name: fix
+          image: {{ .Values.acmArgocdOpenapiFix.image | default "registry.redhat.io/openshift4/ose-cli:latest" | quote }}
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              set -euo pipefail
+              # Only restart the Argo CD controller if this run actually had
+              # to fix something. The VP Operator's Pattern reconcile loop
+              # touches the clustergroup Application's Helm parameters every
+              # ~10-15s (by design, for drift correction), which triggers a
+              # PostSync hook run on effectively every sync -- if this hook
+              # always restarts the controller unconditionally, the
+              # controller (and every downstream sync it's mid-way through)
+              # gets interrupted on a tight, near-continuous cycle, even when
+              # ocm-proxyserver was already scaled down and its APIServices
+              # already removed from a previous run. Restarting only on
+              # actual change breaks that loop while still fixing the
+              # Sync=Unknown issue whenever it genuinely recurs (e.g. ACM
+              # recreating the deployment/APIServices on its own schedule).
+              changed=false
+              ready="$(oc get deployment ocm-proxyserver -n multicluster-engine -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo 0)"
+              if [[ "${ready:-0}" != "0" ]]; then
+                echo "Scaling ocm-proxyserver to 0 (broken clusterview OpenAPI for Argo CD)..."
+                oc scale deployment/ocm-proxyserver -n multicluster-engine --replicas=0 2>/dev/null || true
+                changed=true
+              fi
+              for name in \
+                v1.clusterview.open-cluster-management.io \
+                v1alpha1.clusterview.open-cluster-management.io \
+                v1beta1.proxy.open-cluster-management.io; do
+                if oc get apiservice "$name" -o jsonpath='{.spec.service.name}' 2>/dev/null | grep -qx ocm-proxyserver; then
+                  echo "Deleting APIService $name (ocm-proxyserver backend)"
+                  oc delete apiservice "$name" --ignore-not-found
+                  changed=true
+                fi
+              done
+              if [[ "$changed" == "true" ]]; then
+                echo "Restarting Argo CD application controller..."
+                oc rollout restart statefulset/{{ $argoNs }}-application-controller -n {{ $argoNs }}
+                oc rollout status statefulset/{{ $argoNs }}-application-controller -n {{ $argoNs }} --timeout=180s
+                echo "Done. Hub apps should report OutOfSync/Synced instead of Unknown."
+              else
+                echo "Nothing to fix (ocm-proxyserver already scaled down, no broken APIServices found) -- controller left untouched."
+              fi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: acm-argocd-openapi-fix
+  namespace: {{ $argoNs }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  schedule: {{ .Values.acmArgocdOpenapiFix.schedule | default "*/2 * * * *" | quote }}
+  # Without these three settings, a hung/failing `oc` call or pod-creation
+  # error (e.g. a transiently missing ServiceAccount) never gets terminated
+  # -- every scheduled tick then leaves one more permanently-"Running" Job
+  # behind forever. Discovered live after 354 such Jobs accumulated over
+  # ~3.5 days (the ServiceAccount had been missing that whole time, so every
+  # single Job failed pod creation and just sat retrying indefinitely), which
+  # was enough sustained apiserver/pod churn to make the Argo CD application
+  # controller StatefulSet restart every 20-40 seconds around the clock.
+  # concurrencyPolicy alone does not stop an already-stuck run;
+  # activeDeadlineSeconds is what actually terminates it.
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 60
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: acm-argocd-openapi-fix
+          containers:
+            - name: fix
+              image: {{ .Values.acmArgocdOpenapiFix.image | default "registry.redhat.io/openshift4/ose-cli:latest" | quote }}
+              command:
+                - /bin/bash
+                - -ec
+                - |
+                  set -euo pipefail
+                  ready="$(oc get deployment ocm-proxyserver -n multicluster-engine -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo 0)"
+                  if [[ "${ready:-0}" != "0" ]]; then
+                    echo "ocm-proxyserver ready=${ready}; scaling to 0"
+                    oc scale deployment/ocm-proxyserver -n multicluster-engine --replicas=0
+                  fi
+                  for name in \
+                    v1.clusterview.open-cluster-management.io \
+                    v1alpha1.clusterview.open-cluster-management.io \
+                    v1beta1.proxy.open-cluster-management.io; do
+                    if oc get apiservice "$name" -o jsonpath='{.spec.service.name}' 2>/dev/null | grep -qx ocm-proxyserver; then
+                      echo "Deleting recreated APIService $name"
+                      oc delete apiservice "$name" --ignore-not-found
+                    fi
+                  done
+{{- end }}

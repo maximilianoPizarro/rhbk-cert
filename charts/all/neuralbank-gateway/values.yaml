@@ -1,0 +1,31 @@
+gateway:
+  name: neuralbank-gateway
+  # hostname set via values-hub.yaml override: *.<localClusterDomain>
+  hostname: ""
+  # tlsSecretName is auto-created by Kuadrant when TLSPolicy is applied.
+  tlsSecretName: neuralbank-gateway-tls
+  # gatewayClassName must match the installed Istio instance name.
+  gatewayClassName: istio
+
+tlsPolicy:
+  duration: 2160h                    # 90 days
+  renewBefore: 360h                  # 15 days before expiry
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+
+dnspolicy:
+  enabled: false                     # enable when DNSPolicy CRD is available (RHCL >= 4.x)
+
+neuralbank:
+  # host set via values-hub.yaml override: neuralbank.<localClusterDomain>
+  host: ""
+  serviceNamespace: neuralbank-stack
+  serviceName: neuralbank
+  servicePort: 8080
+
+  oidc:
+    enabled: true
+    # RHBK OIDC realm URL — set via override: https://rhbk.<localClusterDomain>/realms/neuralbank
+    issuerURL: ""
+    clientID: neuralbank

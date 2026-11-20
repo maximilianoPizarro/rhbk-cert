@@ -1,0 +1,166 @@
+main:
+  clusterGroupName: hub
+  multiSourceConfig:
+    enabled: true
+    clusterGroupChartVersion: "0.9.*"
+    helmRepoUrl: https://charts.validatedpatterns.io
+
+clusterGroup:
+  name: hub
+  argoCD:
+    rbac:
+      defaultPolicy: role:admin
+      policy: |
+        g, system:cluster-admins, role:admin
+        g, system:masters, role:admin
+        g, admin, role:admin
+      scopes: '[groups]'
+
+  namespaces:
+    cert-manager-operator:
+      operatorGroup: true
+      targetNamespaces: []
+    cert-manager: {}
+    keycloak-system:
+      operatorGroup: true
+      targetNamespaces:
+        - keycloak-system
+    redhat-connectivity-link-operator:
+      operatorGroup: true
+      targetNamespaces: []
+    kuadrant-system: {}
+    istio-system: {}
+    istio-cni: {}
+    ztunnel: {}
+    neuralbank-stack: {}
+    external-secrets-operator:
+      operatorGroup: true
+      targetNamespaces: []
+    external-secrets: {}
+    vault: {}
+
+  subscriptions:
+    cert-manager:
+      name: openshift-cert-manager-operator
+      namespace: cert-manager-operator
+      channel: stable-v1
+      source: redhat-operators
+    eso:
+      name: openshift-external-secrets-operator
+      namespace: external-secrets-operator
+      channel: stable-v1
+      source: redhat-operators
+    servicemesh:
+      name: servicemeshoperator3
+      namespace: openshift-operators
+      channel: stable-3.2
+      source: redhat-operators
+    rhcl:
+      name: rhcl-operator
+      namespace: redhat-connectivity-link-operator
+      channel: stable
+      source: redhat-operators
+    rhbk:
+      name: rhbk-operator
+      namespace: keycloak-system
+      channel: stable-v26.4
+      source: redhat-operators
+
+  argoProjects:
+    - hub
+    - platform
+    - security
+    - mesh
+    - external-secrets
+    - workshop
+
+  sharedValueFiles:
+    - '/overrides/values-{{ $.Values.global.clusterPlatform }}.yaml'
+    - '/overrides/values-{{ $.Values.global.clusterVersion }}-{{ $.Values.clusterGroup.name }}.yaml'
+
+  applications:
+    openshift-gitops:
+      name: openshift-gitops
+      namespace: openshift-gitops
+      argoProject: platform
+      path: charts/all/openshift-gitops
+      syncWave: "0"
+      overrides:
+        - name: clusterRole
+          value: hub
+        - name: argocdLocalUser.enabled
+          value: "true"
+
+    vault:
+      name: vault
+      namespace: vault
+      argoProject: external-secrets
+      chart: hashicorp-vault
+      chartVersion: 0.1.*
+      syncWave: "2"
+
+    openshift-external-secrets:
+      name: openshift-external-secrets
+      namespace: external-secrets
+      argoProject: external-secrets
+      chart: openshift-external-secrets
+      chartVersion: 0.0.*
+      syncWave: "2"
+
+    vault-secrets-bootstrap:
+      name: vault-secrets-bootstrap
+      namespace: vault
+      argoProject: external-secrets
+      path: charts/all/vault-secrets-bootstrap
+      syncWave: "3"
+
+    servicemesh-config:
+      name: servicemesh-config
+      namespace: istio-system
+      argoProject: mesh
+      chart: servicemesh
+      chartVersion: 0.1.*
+      syncWave: "4"
+      overrides:
+        - name: servicemesh.profile
+          value: ambient
+        - name: servicemesh.istio.name
+          value: default
+
+    cert-manager-config:
+      name: cert-manager-config
+      namespace: cert-manager
+      argoProject: security
+      path: charts/all/cert-manager-config
+      syncWave: "5"
+      overrides:
+        - name: acme.enabled
+          value: "true"
+        - name: rhbkCertificate.dnsName
+          value: 'rhbk.{{ .Values.global.localClusterDomain }}'
+
+    rhbk-cert:
+      name: rhbk-cert
+      namespace: keycloak-system
+      argoProject: security
+      path: charts/all/rhbk-cert
+      syncWave: "6"
+      overrides:
+        - name: keycloak.hostname
+          value: 'rhbk.{{ .Values.global.localClusterDomain }}'
+        - name: keycloak.tlsSecretName
+          value: rhbk-tls-secret
+
+    neuralbank-gateway:
+      name: neuralbank-gateway
+      namespace: neuralbank-stack
+      argoProject: mesh
+      path: charts/all/neuralbank-gateway
+      syncWave: "7"
+      overrides:
+        - name: gateway.hostname
+          value: '*.{{ .Values.global.localClusterDomain }}'
+        - name: neuralbank.host
+          value: 'neuralbank.{{ .Values.global.localClusterDomain }}'
+        - name: tlsPolicy.issuerRef.name
+          value: letsencrypt-prod

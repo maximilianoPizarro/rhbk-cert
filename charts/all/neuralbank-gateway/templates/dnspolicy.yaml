@@ -1,0 +1,18 @@
+{{- if .Values.dnspolicy.enabled }}
+apiVersion: kuadrant.io/v1
+kind: DNSPolicy
+metadata:
+  name: {{ .Values.gateway.name }}-dns
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: {{ .Values.gateway.name }}
+  loadBalancing:
+    weighted:
+      defaultWeight: 120
+      custom: []
+{{- end }}

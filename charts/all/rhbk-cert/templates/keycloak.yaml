@@ -1,0 +1,29 @@
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata:
+  name: rhbk
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  instances: {{ .Values.keycloak.instances }}
+  db:
+    vendor: postgres
+    host: postgres-db
+    database: {{ .Values.postgresql.database }}
+    port: {{ .Values.postgresql.port }}
+    usernameSecret:
+      name: {{ .Values.postgresql.usernameSecretName }}
+      key: {{ .Values.postgresql.usernameSecretKey }}
+    passwordSecret:
+      name: {{ .Values.postgresql.passwordSecretName }}
+      key: {{ .Values.postgresql.passwordSecretKey }}
+  http:
+    tlsSecret: {{ .Values.keycloak.tlsSecretName }}
+  hostname:
+    hostname: {{ .Values.keycloak.hostname }}
+  proxy:
+    headers: {{ .Values.keycloak.proxy.headers }}
+  bootstrapAdmin:
+    user:
+      secret: {{ .Values.keycloak.bootstrapAdminSecretName }}

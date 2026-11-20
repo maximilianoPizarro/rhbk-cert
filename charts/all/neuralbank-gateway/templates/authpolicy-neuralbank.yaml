@@ -1,0 +1,22 @@
+{{- if .Values.neuralbank.oidc.enabled }}
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: neuralbank-oidc
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: neuralbank
+  rules:
+    authentication:
+      jwt:
+        credentials:
+          authorizationHeader:
+            prefix: Bearer
+        jwt:
+          issuerUrl: {{ .Values.neuralbank.oidc.issuerURL | quote }}
+{{- end }}

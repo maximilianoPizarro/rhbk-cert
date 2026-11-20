@@ -1,0 +1,6 @@
+apiVersion: v2
+name: neuralbank-gateway
+description: Istio Gateway with Kuadrant TLSPolicy and Neuralbank HTTPRoute
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

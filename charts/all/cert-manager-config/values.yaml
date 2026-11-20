@@ -1,0 +1,75 @@
+acme:
+  enabled: true
+  server: https://acme-v02.api.letsencrypt.org/directory
+  email: admin@example.com
+  privateKeySecretName: letsencrypt-prod-key
+
+  # Set provider to one of: route53 | cloudflare | azure | google | acmedns
+  # Then fill in only the section for your chosen provider below.
+  provider: route53
+
+  # --- AWS Route 53 ---
+  # Requires a Secret with key "secret-access-key" in namespace cert-manager.
+  # IAM policy required: route53:GetChange, route53:ChangeResourceRecordSets,
+  #                      route53:ListHostedZonesByName
+  route53:
+    region: us-east-1
+    hostedZoneID: ""                  # e.g. Z1XXXXXXXXXX
+    credentialsSecretName: dns-credentials
+    credentialsSecretKey: secret-access-key
+    # Optional: use IAM role instead of credentials secret
+    # role: arn:aws:iam::123456789012:role/cert-manager
+
+  # --- Cloudflare ---
+  # Requires a Secret with key "api-token" in namespace cert-manager.
+  # Cloudflare API Token needs: Zone.DNS Edit permission.
+  cloudflare:
+    email: ""                         # Cloudflare account email
+    credentialsSecretName: dns-credentials
+    credentialsSecretKey: api-token
+
+  # --- Azure DNS ---
+  # Requires a Secret with key "client-secret" in namespace cert-manager.
+  # Service principal must have DNS Zone Contributor role on the DNS zone.
+  azure:
+    subscriptionID: ""
+    resourceGroupName: ""
+    hostedZoneName: ""               # e.g. example.com
+    environment: AzurePublicCloud    # AzurePublicCloud | AzureChinaCloud | AzureGermanCloud
+    tenantID: ""
+    clientID: ""
+    credentialsSecretName: dns-credentials
+    credentialsSecretKey: client-secret
+
+  # --- Google Cloud DNS ---
+  # Requires a Secret with key "key.json" (GCP service account JSON) in namespace cert-manager.
+  # Service account needs: roles/dns.admin on the Cloud DNS zone.
+  google:
+    project: ""                      # GCP project ID
+    credentialsSecretName: dns-credentials
+    credentialsSecretKey: key.json
+
+  # --- ACME DNS (acme-dns server) ---
+  # Self-hosted ACME DNS challenge delegation server.
+  # Requires a Secret with key "acmedns.json" in namespace cert-manager.
+  acmedns:
+    host: ""                         # e.g. https://auth.acme-dns.io
+    credentialsSecretName: dns-credentials
+    credentialsSecretKey: acmedns.json
+
+selfSigned:
+  enabled: false
+  # When true, creates a SelfSigned root CA used as the ClusterIssuer.
+  # Use for air-gapped or internal clusters where ACME is not reachable.
+  caCertSecretName: rhbk-cert-ca
+
+rhbkCertificate:
+  secretName: rhbk-tls-secret
+  namespace: keycloak-system
+  # dnsName set via values-hub.yaml override: rhbk.<localClusterDomain>
+  dnsName: ""
+  duration: 2160h                    # 90 days
+  renewBefore: 360h                  # 15 days before expiry
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer

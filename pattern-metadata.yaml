@@ -1,0 +1,67 @@
+metadata_version: "1.0"
+name: rhbk-cert
+pattern_version: "1.0"
+description: >
+  Automated TLS certificate rotation for Red Hat Build of Keycloak and OpenShift
+  applications using cert-manager, Kuadrant TLSPolicy, and GitOps. Provides a
+  replicable path for securing any number of applications on the cluster.
+display_name: RHBK Certificate Rotation
+repo_url: https://github.com/maximilianoPizarro/rhbk-cert
+docs_repo_url: https://github.com/maximilianoPizarro/rhbk-cert
+issues_url: https://github.com/maximilianoPizarro/rhbk-cert/issues
+docs_url: https://maximilianopizarro.github.io/rhbk-cert/
+ci_url: https://github.com/maximilianoPizarro/rhbk-cert/actions
+tier: sandbox
+org: maximilianoPizarro
+owners:
+  - maximilianoPizarro
+clustergroupname: hub
+maintainers:
+  - name: Maximiliano Pizarro
+    email: mapizarr@redhat.com
+    role: Specialist Solution Architect
+minOCPVersion: "4.17"
+gitBranch: main
+industries:
+  - financial-services
+  - healthcare
+  - retail
+useCases:
+  - security
+  - devops
+products:
+  - name: Red Hat OpenShift Container Platform
+    version: "4.17"
+  - name: cert-manager Operator for Red Hat OpenShift
+    version: stable-v1
+  - name: Red Hat Build of Keycloak
+    version: "26.4"
+  - name: Red Hat Connectivity Link
+    version: stable
+  - name: Red Hat OpenShift Service Mesh
+    version: "3.2"
+  - name: Red Hat OpenShift GitOps
+    version: "1.14"
+  - name: External Secrets Operator
+    version: stable-v1
+requirements:
+  hub:
+    controlPlane:
+      platform:
+        aws:
+          replicas: 3
+          type: m6a.xlarge
+    compute:
+      platform:
+        aws:
+          replicas: 3
+          type: m6a.2xlarge
+extra_features:
+  spoke_support: false
+  hypershift_support: false
+external_requirements:
+  cluster_sizing_note: >
+    Single-cluster deployment (hub only). Worker nodes require RWO storage class
+    for PostgreSQL (RHBK backend). DNS wildcard *.apps.<cluster-domain> must
+    resolve to the cluster load balancer. DNS provider API access required for
+    ACME DNS01 certificate issuance.

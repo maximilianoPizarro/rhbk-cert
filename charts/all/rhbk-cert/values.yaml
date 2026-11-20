@@ -1,0 +1,20 @@
+keycloak:
+  instances: 1
+  # tlsSecretName must match the secretName in cert-manager-config Certificate CR.
+  tlsSecretName: rhbk-tls-secret
+  # hostname set via values-hub.yaml override: rhbk.<localClusterDomain>
+  hostname: ""
+  proxy:
+    headers: xforwarded
+  bootstrapAdminSecretName: keycloak-initial-admin
+
+postgresql:
+  image: registry.redhat.io/rhel9/postgresql-15:latest
+  database: keycloak
+  port: 5432
+  storage: 1Gi
+  # Credentials pulled from ExternalSecret / Vault via keycloak-db-secret
+  usernameSecretName: keycloak-db-secret
+  usernameSecretKey: username
+  passwordSecretName: keycloak-db-secret
+  passwordSecretKey: password
