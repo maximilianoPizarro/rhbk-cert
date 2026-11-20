@@ -170,5 +170,7 @@ clusterGroup:
           value: '*.{{ .Values.global.localClusterDomain }}'
         - name: neuralbank.host
           value: 'neuralbank.{{ .Values.global.localClusterDomain }}'
+        - name: neuralbank.oidc.issuerURL
+          value: 'https://rhbk.{{ .Values.global.localClusterDomain }}/realms/neuralbank'
         - name: tlsPolicy.issuerRef.name
           value: '{{ .Values.global.certificateIssuer | default "letsencrypt-prod" }}'
