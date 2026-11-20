@@ -134,10 +134,14 @@ clusterGroup:
       path: charts/all/cert-manager-config
       syncWave: "5"
       overrides:
+        # acmeEnabled is unset by default, which keeps ACME on. A cluster can
+        # set global.acmeEnabled=false when it already has a working issuer.
         - name: acme.enabled
-          value: "true"
+          value: '{{ if hasKey .Values.global "acmeEnabled" }}{{ .Values.global.acmeEnabled }}{{ else }}true{{ end }}'
         - name: rhbkCertificate.dnsName
           value: 'rhbk.{{ .Values.global.localClusterDomain }}'
+        - name: rhbkCertificate.issuerRef.name
+          value: '{{ .Values.global.certificateIssuer | default "letsencrypt-prod" }}'
 
     rhbk-cert:
       name: rhbk-cert
@@ -163,4 +167,4 @@ clusterGroup:
         - name: neuralbank.host
           value: 'neuralbank.{{ .Values.global.localClusterDomain }}'
         - name: tlsPolicy.issuerRef.name
-          value: letsencrypt-prod
+          value: '{{ .Values.global.certificateIssuer | default "letsencrypt-prod" }}'
