@@ -17,11 +17,11 @@ if [[ -z "$version" ]]; then
   fail "could not read ClusterVersion.status.desired.version. The client needs permission to read clusterversion."
 fi
 
-python - "$version" <<'PY' || fail "OpenShift $version is older than 4.17. This pattern expects 4.17 or newer."
+python - "$version" <<'PY' || fail "OpenShift $version is older than 4.19. Connectivity Link and Service Mesh 3 require 4.19 or newer."
 import sys
 version = sys.argv[1].split("-", 1)[0]
 parts = [int(p) for p in version.split(".")[:2]]
-if parts < [4, 17]:
+if parts < [4, 19]:
     sys.exit(1)
 PY
 

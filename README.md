@@ -18,12 +18,14 @@ cert-manager issues `rhbk-tls-secret` for Red Hat build of Keycloak and, through
 
 | Resource | Minimum | Recommended |
 |---|---|---|
-| OCP version | 4.17 | 4.20 |
+| OCP version | 4.19 | 4.20 |
 | Control plane nodes | 3 × 4 vCPU / 16 GB RAM | 3 × 8 vCPU / 32 GB RAM |
 | Worker nodes | 3 × 8 vCPU / 32 GB RAM | 3 × 16 vCPU / 64 GB RAM |
 | Storage class | RWO, 50 GB/worker | RWO, 100 GB/worker |
 | DNS | Wildcard `*.apps.<cluster-domain>` → LB | Same |
 | OCP Operator Catalog | `redhat-operators` accessible | Same |
+
+OpenShift 4.19 is the minimum because that is the first release where Red Hat Connectivity Link and OpenShift Service Mesh 3 are supported. 4.20 remains the recommended release.
 
 ---
 
@@ -60,7 +62,7 @@ For internal/air-gapped clusters, set `acme.enabled: false` and `selfSigned.enab
 
 ## Prerequisites
 
-- OpenShift CLI: `oc` v4.17+
+- OpenShift CLI: `oc` v4.19+
 - Helm: `helm` v3.14+
 - GNU Make: `make`
 - Cluster-admin access on the target OpenShift cluster
@@ -164,7 +166,7 @@ spec:
 ## References
 
 - [Validated Patterns Framework](https://validatedpatterns.io)
-- [cert-manager Operator for Red Hat OpenShift](https://docs.redhat.com/en/documentation/openshift_container_platform/4.17/html/security_and_compliance/cert-manager-operator-for-red-hat-openshift)
+- [cert-manager Operator for Red Hat OpenShift](https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/security_and_compliance/cert-manager-operator-for-red-hat-openshift)
 - [Red Hat Build of Keycloak Operator](https://access.redhat.com/documentation/en-us/red_hat_build_of_keycloak)
 - [Red Hat Connectivity Link](https://docs.redhat.com/en/documentation/red_hat_connectivity_link)
 - [Red Hat OpenShift Service Mesh](https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh)

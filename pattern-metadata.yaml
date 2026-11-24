@@ -20,7 +20,7 @@ maintainers:
   - name: Maximiliano Pizarro
     email: mapizarr@redhat.com
     role: Specialist Solution Architect
-minOCPVersion: "4.17"
+minOCPVersion: "4.19"
 gitBranch: main
 industries:
   - financial-services
@@ -31,7 +31,7 @@ useCases:
   - devops
 products:
   - name: Red Hat OpenShift Container Platform
-    version: "4.17"
+    version: "4.19"
   - name: cert-manager Operator for Red Hat OpenShift
     version: stable-v1
   - name: Red Hat Build of Keycloak
