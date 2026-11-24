@@ -1,0 +1,31 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: rhbk-cert-certificates
+  namespace: {{ .Release.Namespace }}
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  groups:
+    - name: rhbk-cert.certificates
+      rules:
+        - alert: CertificateExpiringSoon
+          expr: (certmanager_certificate_expiration_timestamp_seconds - time()) / 86400 < 14
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: Certificate {{`{{ $labels.namespace }}`}}/{{`{{ $labels.name }}`}} expires in less than 14 days
+        - alert: CertificateNotReady
+          expr: certmanager_certificate_ready_status == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Certificate {{`{{ $labels.namespace }}`}}/{{`{{ $labels.name }}`}} is not Ready
+{{- end }}

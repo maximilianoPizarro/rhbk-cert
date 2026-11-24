@@ -2,7 +2,7 @@ gateway:
   name: neuralbank-gateway
   # hostname set via values-hub.yaml override: *.<localClusterDomain>
   hostname: ""
-  # tlsSecretName is auto-created by Kuadrant when TLSPolicy is applied.
+  # tlsSecretName is created by Connectivity Link when TLSPolicy is applied.
   tlsSecretName: neuralbank-gateway-tls
   # gatewayClassName must match the installed Istio instance name.
   gatewayClassName: istio

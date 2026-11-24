@@ -3,7 +3,7 @@ name: rhbk-cert
 pattern_version: "1.0"
 description: >
   Automated TLS certificate rotation for Red Hat Build of Keycloak and OpenShift
-  applications using cert-manager, Kuadrant TLSPolicy, and GitOps. Provides a
+  applications using cert-manager, Connectivity Link TLSPolicy, and GitOps. Provides a
   replicable path for securing any number of applications on the cluster.
 display_name: RHBK Certificate Rotation
 repo_url: https://github.com/maximilianoPizarro/rhbk-cert

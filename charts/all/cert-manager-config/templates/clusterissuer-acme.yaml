@@ -5,9 +5,10 @@ metadata:
   name: letsencrypt-prod
   annotations:
     argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   acme:
-    server: {{ .Values.acme.server }}
+    server: {{ if .Values.acme.staging }}{{ .Values.acme.stagingServer }}{{ else }}{{ .Values.acme.server }}{{ end }}
     email: {{ .Values.acme.email }}
     privateKeySecretRef:
       name: {{ .Values.acme.privateKeySecretName }}

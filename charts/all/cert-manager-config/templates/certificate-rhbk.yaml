@@ -6,6 +6,7 @@ metadata:
   namespace: {{ .Values.rhbkCertificate.namespace }}
   annotations:
     argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   secretName: {{ .Values.rhbkCertificate.secretName }}
   duration: {{ .Values.rhbkCertificate.duration }}

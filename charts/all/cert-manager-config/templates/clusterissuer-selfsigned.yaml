@@ -6,6 +6,7 @@ metadata:
   name: selfsigned-issuer
   annotations:
     argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   selfSigned: {}
 ---
@@ -16,6 +17,7 @@ metadata:
   namespace: cert-manager
   annotations:
     argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   isCA: true
   commonName: rhbk-cert-ca
@@ -33,6 +35,7 @@ metadata:
   name: letsencrypt-prod
   annotations:
     argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   ca:
     secretName: {{ .Values.selfSigned.caCertSecretName }}

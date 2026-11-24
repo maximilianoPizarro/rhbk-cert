@@ -1,6 +1,11 @@
 acme:
   enabled: true
+  # staging switches the ACME directory to Let's Encrypt staging so a trial
+  # does not consume production rate limits. The ClusterIssuer name stays
+  # letsencrypt-prod so issuerRef values do not have to change.
+  staging: false
   server: https://acme-v02.api.letsencrypt.org/directory
+  stagingServer: https://acme-staging-v02.api.letsencrypt.org/directory
   email: admin@example.com
   privateKeySecretName: letsencrypt-prod-key
 
@@ -62,6 +67,11 @@ selfSigned:
   # When true, creates a SelfSigned root CA used as the ClusterIssuer.
   # Use for air-gapped or internal clusters where ACME is not reachable.
   caCertSecretName: rhbk-cert-ca
+
+monitoring:
+  # PrometheusRule for certificate expiry and Ready status. Off by default
+  # because the monitoring.coreos.com CRD is not part of this pattern.
+  enabled: false
 
 rhbkCertificate:
   secretName: rhbk-tls-secret

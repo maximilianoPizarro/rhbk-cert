@@ -1,8 +1,8 @@
 # rhbk-cert — Automated Certificate Rotation Validated Pattern
 
-A [Red Hat Validated Pattern](https://validatedpatterns.io) that deploys a fully automated TLS certificate rotation circle for [Red Hat Build of Keycloak (RHBK)](https://access.redhat.com/products/red-hat-build-of-keycloak) and OpenShift applications. cert-manager issues and renews certificates; Kuadrant TLSPolicy attaches them to the Istio Gateway; the RHBK operator picks them up automatically — no manual certificate management ever.
+A [Red Hat Validated Pattern](https://validatedpatterns.io) that deploys a fully automated TLS certificate rotation circle for [Red Hat Build of Keycloak (RHBK)](https://access.redhat.com/products/red-hat-build-of-keycloak) and OpenShift applications. cert-manager issues and renews certificates; Connectivity Link TLSPolicy attaches them to the Service Mesh Gateway; the RHBK operator picks them up automatically — no manual certificate management ever.
 
-**Target application:** [Neuralbank](https://github.com/maximilianoPizarro/from-3scale-to-connectivity-link) secured with OIDC via RHBK and [Red Hat Connectivity Link (Kuadrant)](https://www.redhat.com/en/technologies/cloud-computing/openshift/connectivity-link).
+**Target application:** [Neuralbank](https://github.com/maximilianoPizarro/from-3scale-to-connectivity-link) secured with OIDC via RHBK and [Red Hat Connectivity Link](https://www.redhat.com/en/technologies/cloud-computing/connectivity-link).
 
 **Documentation (EN/ES):** https://maximilianopizarro.github.io/rhbk-cert/
 
@@ -10,19 +10,7 @@ A [Red Hat Validated Pattern](https://validatedpatterns.io) that deploys a fully
 
 ## Certificate Rotation Circle
 
-```
-ClusterIssuer (ACME DNS01 / Internal CA)
-  │
-  ├─► cert-manager Certificate [keycloak-system/rhbk-tls-secret]
-  │       └─► RHBK Operator detects Secret change → rolling restart (~1 min)
-  │               └─► Keycloak serves HTTPS with renewed cert
-  │
-  └─► Kuadrant TLSPolicy → cert-manager Certificate [neuralbank-stack/neuralbank-gateway-tls]
-          └─► Istio Gateway hot-reloads cert (zero downtime)
-                  └─► Neuralbank HTTPRoute → OIDC secured via RHBK
-```
-
-Renewal is automatic. When cert-manager renews a certificate it updates the Kubernetes Secret in-place. The Gateway hot-reloads without restart. RHBK restarts within one minute. No GitOps change required.
+cert-manager issues `rhbk-tls-secret` for Red Hat build of Keycloak and, through a Connectivity Link TLSPolicy, `neuralbank-gateway-tls` for the Service Mesh Gateway. Renewal updates the Secret in place. The Gateway reloads it without a pod restart. With one RHBK replica the operator rollout interrupts HTTPS for about a minute; two replicas avoid that. The diagram is on the documentation site.
 
 ---
 
@@ -47,7 +35,7 @@ Renewal is automatic. When cert-manager renews a certificate it updates the Kube
 | cert-manager Operator for Red Hat OpenShift | stable-v1 | redhat-operators |
 | External Secrets Operator | stable-v1 | redhat-operators |
 | Red Hat OpenShift Service Mesh 3 (Sail) | stable-3.2 | redhat-operators |
-| Red Hat Connectivity Link (Kuadrant) | stable | redhat-operators |
+| Red Hat Connectivity Link | stable | redhat-operators |
 | Red Hat Build of Keycloak | stable-v26.4 | redhat-operators |
 
 All operators are sourced from the official Red Hat Operator Catalog (`redhat-operators`). No community or third-party catalogs required.
@@ -113,7 +101,7 @@ oc get clusterissuer letsencrypt-prod
 # RHBK certificate issued by cert-manager
 oc get certificate -n keycloak-system rhbk-tls
 
-# Gateway certificate issued by Kuadrant TLSPolicy
+# Gateway certificate issued by Connectivity Link TLSPolicy
 oc get certificate -n neuralbank-stack
 
 # Keycloak instance running with TLS
@@ -178,5 +166,5 @@ spec:
 - [Validated Patterns Framework](https://validatedpatterns.io)
 - [cert-manager Operator for Red Hat OpenShift](https://docs.redhat.com/en/documentation/openshift_container_platform/4.17/html/security_and_compliance/cert-manager-operator-for-red-hat-openshift)
 - [Red Hat Build of Keycloak Operator](https://access.redhat.com/documentation/en-us/red_hat_build_of_keycloak)
-- [Red Hat Connectivity Link (Kuadrant)](https://docs.kuadrant.io)
+- [Red Hat Connectivity Link](https://docs.redhat.com/en/documentation/red_hat_connectivity_link)
 - [Red Hat OpenShift Service Mesh](https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh)
