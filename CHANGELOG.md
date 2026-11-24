@@ -7,6 +7,7 @@
 
 ## Unreleased
 
+- Use the official Keycloak favicon on the documentation site.
 - Deploy Neuralbank, the example RHBK client, from chart `charts/all/neuralbank`. The Gateway sends `/api` through a Connectivity Link AuthPolicy.
 - README commands to read the Vault root token and the RHBK bootstrap admin from cluster Secrets.
 - Minimum OpenShift is 4.19, the first release that supports Red Hat Connectivity Link and OpenShift Service Mesh 3.
