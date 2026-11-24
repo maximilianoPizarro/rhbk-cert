@@ -165,6 +165,12 @@
       <strong>Operador RHBK</strong> (vía <code>spec.http.tlsSecret</code>).
       Los certificados se renuevan antes de vencer. Sin intervención humana. Replicable para N aplicaciones.
     </p>
+    <p>
+      <strong>Neuralbank</strong> es el cliente de ejemplo de RHBK. El chart <code>neuralbank</code> despliega
+      el frontend, la API y la base en <code>neuralbank-stack</code>. El Gateway envía <code>/</code> al
+      frontend y <code>/api</code> a la API. Una AuthPolicy de Connectivity Link valida el JWT del realm
+      <code>neuralbank</code> de RHBK en la API. Cualquier otro cliente puede usar el mismo Gateway.
+    </p>
 
     <div class="card-grid">
       <div class="card">
@@ -403,12 +409,13 @@ openssl s_client -connect rhbk.apps.&lt;dominio-del-cluster&gt;:443 -servername 
     <h3>Más de un clúster</h3>
     <p>El patrón trae un solo cluster group de hub. Otro clúster necesita su propio Pattern CR, su propio issuer y su propia copia de las credenciales DNS. Este repositorio no reparte un certificado a varios clústeres.</p>
     <h3>Neuralbank</h3>
-    <p>El HTTPRoute queda Accepted y Degraded hasta que exista un Service <code>neuralbank</code> en <code>neuralbank-stack</code>. Este repositorio no despliega esa aplicación. El certificado del gateway puede estar Ready igual.</p>
+    <p>Neuralbank es el cliente de ejemplo de RHBK y lo despliega el chart <code>charts/all/neuralbank</code>. El frontend se abre en <code>https://neuralbank.&lt;dominio del clúster&gt;/</code>. Connectivity Link valida el JWT de RHBK solo en <code>/api</code>. El usuario de prueba está en el Secret <code>neuralbank-user</code> de <code>neuralbank-stack</code>. Otro cliente puede adjuntar su propio HTTPRoute a <code>neuralbank-gateway</code>.</p>
   </section>
 
   <section id="extender">
     <h2>Extensión a Nuevas Aplicaciones</h2>
     <p>
+      El ejemplo usa <code>neuralbank-stack</code>, el namespace del cliente de ejemplo de RHBK.
       El <strong>ClusterIssuer</strong> y la <strong>TLSPolicy</strong> del Gateway existente
       cubren automáticamente todos los HTTPRoutes que se le adjunten — sin configuración de certificados adicional.
     </p>

@@ -1,0 +1,17 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  host: {{ .Values.neuralbank.host }}
+  to:
+    kind: Service
+    name: {{ .Values.gateway.name }}-istio
+  port:
+    targetPort: https
+  tls:
+    termination: passthrough
+  wildcardPolicy: None

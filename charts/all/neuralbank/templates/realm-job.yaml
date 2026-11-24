@@ -1,0 +1,149 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuralbank-realm
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+data:
+  client.json: |
+    {
+      "clientId": "{{ .Values.keycloak.clientId }}",
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["https://neuralbank.{{ .Values.clusterDomain }}/*"],
+      "webOrigins": ["https://neuralbank.{{ .Values.clusterDomain }}"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  setup.sh: |
+    #!/bin/sh
+    set -eu
+    microdnf install -y jq
+    KC="https://{{ .Values.keycloak.serviceName }}.{{ .Values.keycloak.namespace }}.svc:{{ .Values.keycloak.port }}"
+    HOST="rhbk.{{ .Values.clusterDomain }}"
+    REALM="{{ .Values.keycloak.realm }}"
+    CLIENT_ID="{{ .Values.keycloak.clientId }}"
+    CA="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    SA_TOKEN="/var/run/secrets/kubernetes.io/serviceaccount/token"
+
+    secret_field() {
+      curl -sS --cacert "${CA}" \
+        -H "Authorization: Bearer $(cat "${SA_TOKEN}")" \
+        "https://kubernetes.default.svc/api/v1/namespaces/$1/secrets/$2" \
+        | jq -r --arg key "$3" '.data[$key]' | base64 -d
+    }
+
+    ADMIN_USER="$(secret_field {{ .Values.keycloak.namespace }} {{ .Values.keycloak.adminSecret }} username)"
+    ADMIN_PASS="$(secret_field {{ .Values.keycloak.namespace }} {{ .Values.keycloak.adminSecret }} password)"
+    APP_USER="$(cat /secrets/user/username)"
+    APP_PASS="$(cat /secrets/user/password)"
+
+    RESP="$(curl -sk -H "Host: ${HOST}" -X POST "${KC}/realms/master/protocol/openid-connect/token" \
+      --data-urlencode "client_id=admin-cli" \
+      --data-urlencode "username=${ADMIN_USER}" \
+      --data-urlencode "password=${ADMIN_PASS}" \
+      --data-urlencode "grant_type=password")"
+    ACCESS="$(printf '%s' "${RESP}" | jq -r '.access_token // empty')"
+    if [ -z "${ACCESS}" ]; then
+      echo "admin login failed" >&2
+      exit 1
+    fi
+
+    code="$(curl -sk -o /dev/null -w '%{http_code}' -H "Host: ${HOST}" -H "Authorization: Bearer ${ACCESS}" \
+      "${KC}/admin/realms/${REALM}")"
+    if [ "${code}" = "404" ]; then
+      curl -sk --fail -H "Host: ${HOST}" -H "Authorization: Bearer ${ACCESS}" \
+        -H "Content-Type: application/json" -X POST \
+        -d "{\"realm\":\"${REALM}\",\"enabled\":true}" \
+        "${KC}/admin/realms" >/dev/null
+      echo "created realm ${REALM}"
+    elif [ "${code}" != "200" ]; then
+      echo "realm lookup returned ${code}" >&2
+      exit 1
+    fi
+
+    clients="$(curl -sk -H "Host: ${HOST}" -H "Authorization: Bearer ${ACCESS}" \
+      "${KC}/admin/realms/${REALM}/clients?clientId=${CLIENT_ID}")"
+    if [ "$(printf '%s' "${clients}" | jq 'length')" = "0" ]; then
+      curl -sk --fail -H "Host: ${HOST}" -H "Authorization: Bearer ${ACCESS}" \
+        -H "Content-Type: application/json" -X POST \
+        --data-binary @/scripts/client.json \
+        "${KC}/admin/realms/${REALM}/clients" >/dev/null
+      echo "created client ${CLIENT_ID}"
+    else
+      id="$(printf '%s' "${clients}" | jq -r '.[0].id')"
+      jq --arg id "${id}" '. + {id:$id}' /scripts/client.json > /tmp/client.json
+      curl -sk --fail -H "Host: ${HOST}" -H "Authorization: Bearer ${ACCESS}" \
+        -H "Content-Type: application/json" -X PUT \
+        --data-binary @/tmp/client.json \
+        "${KC}/admin/realms/${REALM}/clients/${id}" >/dev/null
+      echo "updated client ${CLIENT_ID}"
+    fi
+
+    jq -n --arg user "${APP_USER}" --arg pass "${APP_PASS}" \
+      '{username:$user,enabled:true,firstName:"Test",lastName:"User",email:($user+"@neuralbank.local"),emailVerified:true,requiredActions:[],credentials:[{type:"password",value:$pass,temporary:false}]}' \
+      > /tmp/user.json
+    users="$(curl -sk -G -H "Host: ${HOST}" -H "Authorization: Bearer ${ACCESS}" \
+      --data-urlencode "username=${APP_USER}" --data-urlencode "exact=true" \
+      "${KC}/admin/realms/${REALM}/users")"
+    if [ "$(printf '%s' "${users}" | jq 'length')" = "0" ]; then
+      curl -sk --fail -H "Host: ${HOST}" -H "Authorization: Bearer ${ACCESS}" \
+        -H "Content-Type: application/json" -X POST \
+        --data-binary @/tmp/user.json \
+        "${KC}/admin/realms/${REALM}/users" >/dev/null
+      echo "created user ${APP_USER}"
+    else
+      id="$(printf '%s' "${users}" | jq -r '.[0].id')"
+      printf '%s' "${users}" | jq --arg email "${APP_USER}@neuralbank.local" '.[0] | .email=$email | .emailVerified=true | .requiredActions=[] | .enabled=true | .firstName="Test" | .lastName="User"' > /tmp/updated-user.json
+      curl -sk --fail -H "Host: ${HOST}" -H "Authorization: Bearer ${ACCESS}" \
+        -H "Content-Type: application/json" -X PUT \
+        --data-binary @/tmp/updated-user.json \
+        "${KC}/admin/realms/${REALM}/users/${id}" >/dev/null
+      jq -n --arg pass "${APP_PASS}" '{type:"password",value:$pass,temporary:false}' > /tmp/reset.json
+      curl -sk --fail -H "Host: ${HOST}" -H "Authorization: Bearer ${ACCESS}" \
+        -H "Content-Type: application/json" -X PUT \
+        --data-binary @/tmp/reset.json \
+        "${KC}/admin/realms/${REALM}/users/${id}/reset-password" >/dev/null
+      echo "updated user ${APP_USER}"
+    fi
+    echo "realm ${REALM} ready"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: neuralbank-realm
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  backoffLimit: 8
+  activeDeadlineSeconds: 900
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: neuralbank-realm
+      securityContext:
+        runAsUser: 0
+      containers:
+        - name: setup
+          image: {{ .Values.realmJob.image }}
+          command: ["/bin/sh", "/scripts/setup.sh"]
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+            - name: user
+              mountPath: /secrets/user
+              readOnly: true
+      volumes:
+        - name: scripts
+          configMap:
+            name: neuralbank-realm
+            defaultMode: 0555
+        - name: user
+          secret:
+            secretName: {{ .Values.user.secretName }}

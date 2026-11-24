@@ -171,6 +171,12 @@
       and the <strong>RHBK Operator</strong> (via <code>spec.http.tlsSecret</code>).
       Certificates renew before expiry. No human intervention. Replicable for any number of applications.
     </p>
+    <p>
+      <strong>Neuralbank</strong> is the example RHBK client. Chart <code>neuralbank</code> deploys its
+      frontend, API, and database in <code>neuralbank-stack</code>. The Gateway sends <code>/</code> to the
+      frontend and <code>/api</code> to the API. A Connectivity Link AuthPolicy checks the JWT from the
+      RHBK realm <code>neuralbank</code> on the API. Any other client can use the same Gateway.
+    </p>
 
     <div class="card-grid">
       <div class="card">
@@ -410,12 +416,13 @@ openssl s_client -connect rhbk.apps.&lt;cluster-domain&gt;:443 -servername rhbk.
     <h3>More than one cluster</h3>
     <p>The pattern ships a single hub cluster group. Another cluster needs its own Pattern CR, its own issuer, and its own copy of the DNS credentials. Nothing in this repository fans one certificate out to many clusters.</p>
     <h3>Neuralbank</h3>
-    <p>The HTTPRoute stays Accepted and Degraded until a Service named <code>neuralbank</code> exists in <code>neuralbank-stack</code>. This repository does not deploy that application. The gateway certificate can still be Ready.</p>
+    <p>Neuralbank is the example RHBK client deployed by chart <code>charts/all/neuralbank</code>. The frontend is served at <code>https://neuralbank.&lt;cluster domain&gt;/</code>. Connectivity Link validates the RHBK JWT only on <code>/api</code>. The test user is in Secret <code>neuralbank-user</code> in <code>neuralbank-stack</code>. Another client can still attach its own HTTPRoute to <code>neuralbank-gateway</code>.</p>
   </section>
 
   <section id="extend">
     <h2>Extending to New Applications</h2>
     <p>
+      The sample below uses <code>neuralbank-stack</code>, the namespace of the example RHBK client.
       The existing <strong>ClusterIssuer</strong> and <strong>TLSPolicy</strong> on the Gateway
       cover all HTTPRoutes attached to it — no additional certificate configuration required.
     </p>

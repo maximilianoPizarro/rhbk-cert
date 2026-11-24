@@ -1,0 +1,50 @@
+# Public images from the Neuralbank example:
+# https://github.com/maximilianoPizarro/from-3scale-to-connectivity-link
+clusterDomain: apps.cluster.example.com
+
+backend:
+  replicaCount: 1
+  serviceName: neuralbank-backend
+  port: 8080
+  image:
+    repository: quay.io/maximilianopizarro/neuralbank-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+
+frontend:
+  replicaCount: 1
+  # Service name the Gateway HTTPRoute already expects.
+  serviceName: neuralbank
+  port: 8080
+  image:
+    repository: quay.io/maximilianopizarro/neuralbank-front
+    tag: pkce
+    pullPolicy: IfNotPresent
+
+database:
+  serviceName: neuralbank-db
+  image: registry.redhat.io/rhel8/postgresql-15:latest
+  storage: 1Gi
+  secretName: neuralbank-db
+  username: neuralbank
+  database: neuralbank
+
+keycloak:
+  namespace: keycloak-system
+  serviceName: rhbk-service
+  port: 8443
+  adminSecret: keycloak-initial-admin
+  realm: neuralbank
+  clientId: neuralbank-frontend
+
+user:
+  secretName: neuralbank-user
+  username: user1
+
+vault:
+  store: vault-backend
+  dbPath: secret/data/hub/neuralbank-db
+  userPath: secret/data/hub/neuralbank-user
+
+realmJob:
+  image: registry.redhat.io/ubi9/ubi-minimal:latest

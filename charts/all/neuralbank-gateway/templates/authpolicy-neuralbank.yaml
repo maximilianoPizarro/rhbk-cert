@@ -11,7 +11,9 @@ spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: neuralbank
+    name: neuralbank-api
+  when:
+    - predicate: request.method != 'OPTIONS'
   rules:
     authentication:
       jwt:

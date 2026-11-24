@@ -4,7 +4,7 @@ gateway:
   hostname: ""
   # tlsSecretName is created by Connectivity Link when TLSPolicy is applied.
   tlsSecretName: neuralbank-gateway-tls
-  # gatewayClassName must match the installed Istio instance name.
+  # gatewayClassName must match the installed Service Mesh instance name.
   gatewayClassName: istio
 
 tlsPolicy:
@@ -23,6 +23,8 @@ neuralbank:
   serviceNamespace: neuralbank-stack
   serviceName: neuralbank
   servicePort: 8080
+  backendServiceName: neuralbank-backend
+  backendServicePort: 8080
 
   oidc:
     enabled: true

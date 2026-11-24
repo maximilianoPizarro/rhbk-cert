@@ -2,7 +2,7 @@
 
 A [Red Hat Validated Pattern](https://validatedpatterns.io) that deploys a fully automated TLS certificate rotation circle for [Red Hat Build of Keycloak (RHBK)](https://access.redhat.com/products/red-hat-build-of-keycloak) and OpenShift applications. cert-manager issues and renews certificates; Connectivity Link TLSPolicy attaches them to the Service Mesh Gateway; the RHBK operator picks them up automatically — no manual certificate management ever.
 
-**Target application:** [Neuralbank](https://github.com/maximilianoPizarro/from-3scale-to-connectivity-link) secured with OIDC via RHBK and [Red Hat Connectivity Link](https://www.redhat.com/en/technologies/cloud-computing/connectivity-link).
+**Example RHBK client:** [Neuralbank](https://github.com/maximilianoPizarro/from-3scale-to-connectivity-link) is a sample application secured with OIDC through RHBK and [Red Hat Connectivity Link](https://www.redhat.com/en/technologies/cloud-computing/connectivity-link). Chart `charts/all/neuralbank` deploys the frontend, the API, and PostgreSQL in `neuralbank-stack`. The Gateway HTTPRoute sends `/` to the frontend and `/api` to the API. The Connectivity Link AuthPolicy checks the RHBK JWT on `/api`. Another client can attach its own HTTPRoute to the same Gateway.
 
 **Documentation (EN/ES):** https://maximilianopizarro.github.io/rhbk-cert/
 
@@ -112,6 +112,44 @@ oc get keycloak -n keycloak-system rhbk
 # End-to-end HTTPS test
 curl https://rhbk.<cluster-domain>/realms/master
 ```
+
+---
+
+## Vault and the RHBK login
+
+Vault is sealed after a restart. The init data, including the root token and the unseal keys, is in Secret `vaultkeys` in namespace `imperative`. Do not commit that output.
+
+```bash
+# Vault UI
+oc get route vault -n vault -o jsonpath='https://{.spec.host}{"\n"}'
+
+# root_token logs in to the UI. unseal_keys_b64 unseals Vault.
+oc get secret vaultkeys -n imperative -o go-template='{{index .data "vault_data_json" | base64decode}}{{"\n"}}'
+```
+
+The user that can sign in to the RHBK admin console is the bootstrap admin from `values-secret.yaml` (`keycloak-initial-admin`). External Secrets copies it to Secret `keycloak-initial-admin` in `keycloak-system`.
+
+```bash
+# Admin console. The route name is generated, so list the namespace.
+oc get route -n keycloak-system -o jsonpath='https://{.items[0].spec.host}/admin{"\n"}'
+
+oc get secret keycloak-initial-admin -n keycloak-system \
+  -o go-template='username={{.data.username | base64decode}}{{"\n"}}password={{.data.password | base64decode}}{{"\n"}}'
+```
+
+Sign in on the master realm with that username and password.
+
+Neuralbank has its own test user in realm `neuralbank`. A Job creates that realm, the public client `neuralbank-frontend`, and the user from Secret `neuralbank-user`.
+
+```bash
+host=$(oc get route -n keycloak-system -o jsonpath='{.items[0].spec.host}')
+echo "https://neuralbank.${host#rhbk.}/"
+
+oc get secret neuralbank-user -n neuralbank-stack \
+  -o go-template='username={{.data.username | base64decode}}{{"\n"}}password={{.data.password | base64decode}}{{"\n"}}'
+```
+
+Open that URL and sign in on realm `neuralbank` with that username and password.
 
 ---
 

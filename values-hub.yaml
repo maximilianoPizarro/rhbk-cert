@@ -174,3 +174,13 @@ clusterGroup:
           value: 'https://rhbk.{{ .Values.global.localClusterDomain }}/realms/neuralbank'
         - name: tlsPolicy.issuerRef.name
           value: '{{ .Values.global.certificateIssuer | default "letsencrypt-prod" }}'
+
+    neuralbank:
+      name: neuralbank
+      namespace: neuralbank-stack
+      argoProject: mesh
+      path: charts/all/neuralbank
+      syncWave: "8"
+      overrides:
+        - name: clusterDomain
+          value: '{{ .Values.global.localClusterDomain }}'
